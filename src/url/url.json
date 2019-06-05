@@ -1,0 +1,5 @@
+var allUrl = {
+    "login_url": "http://localhost:8086/user/login",
+    "insertCust_url": "http://localhost:8081/user/insertCust",
+
+};
