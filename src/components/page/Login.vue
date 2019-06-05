@@ -33,7 +33,7 @@ export default {
     return {
       ruleForm: {
         username: "admin",
-        password: "123123"
+        password: "1231231"
       },
       rules: {
         username: [
