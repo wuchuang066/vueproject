@@ -4,7 +4,7 @@
       <div class="ms-title">XXX后台管理系统</div>
       <el-form :model="ruleForm" :rules="rules" ref="ruleForm" label-width="0px" class="ms-content">
         <el-form-item prop="username">
-          <el-input v-model="ruleForm.username" placeholder="username">
+          <el-input v-model="ruleForm.username" placeholder="username" @blur="checkUserName()">
             <el-button slot="prepend" icon="el-icon-lx-people"></el-button>
           </el-input>
         </el-form-item>
@@ -21,7 +21,7 @@
         <div class="login-btn">
           <el-button type="primary" @click="submitForm('ruleForm')">登录</el-button>
         </div>
-        <p class="login-tips">Tips : 用户名和密码随便填。</p>
+        <!-- <p class="login-tips">Tips : 用户名和密码随便填。</p> -->
       </el-form>
     </div>
   </div>
@@ -33,7 +33,7 @@ export default {
     return {
       ruleForm: {
         username: "admin",
-        password: "1231231"
+        password: "123123"
       },
       rules: {
         username: [
@@ -76,12 +76,14 @@ export default {
             .then(response => {
               console.log(response);
               if (response.data == "") {
-                alert("username or password error");
-                this.ruleForm.password='';
+                alert("password error");
+                this.ruleForm.password = "";
                 this.$router.push("/login");
               } else {
                 const username = response.data.xUsername;
+                localStorage.setItem("ms_userid", response.data.xUserid);
                 localStorage.setItem("ms_username", username);
+                localStorage.setItem("ms_loginDate", response.data.xLogindate);
                 this.$router.push("/");
               }
             })
@@ -94,6 +96,28 @@ export default {
           return false;
         }
       });
+    },
+    checkUserName() {
+      const usname = this.ruleForm.username;
+      if(usname=="")return;
+      this.$ajax
+        .post(
+          "http://localhost:8086/user/login",
+          this.$qs.stringify({
+            uname: this.ruleForm.username
+          })
+        )
+        .then(response => {
+          console.log(response);
+          if (response.data == "") {
+            alert("该用户名不存在");
+             this.ruleForm.username = "";
+          }
+        })
+        .catch(function(response) {
+          alert("系统异常，请联系管理员");
+          this.$router.push("/404");
+        });
     }
   }
 };
@@ -112,7 +136,7 @@ export default {
   line-height: 50px;
   text-align: center;
   font-size: 20px;
-  color: palegreen;
+  color: rgb(3, 15, 3);
   border-bottom: 1px solid #ddd;
 }
 .ms-login {
