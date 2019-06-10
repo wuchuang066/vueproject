@@ -148,7 +148,36 @@ export default {
         numbers: ""
       },
       todoList: [],
-      data: [],
+      data: [
+        {
+          name: "2018/09/04",
+          value: 1083
+        },
+        {
+          name: "2018/09/05",
+          value: 941
+        },
+        {
+          name: "2018/09/06",
+          value: 1139
+        },
+        {
+          name: "2018/09/07",
+          value: 816
+        },
+        {
+          name: "2018/09/08",
+          value: 327
+        },
+        {
+          name: "2018/09/09",
+          value: 228
+        },
+        {
+          name: "2018/09/10",
+          value: 1065
+        }
+      ],
       options: {
         title: "最近七天每天的用户访问量",
         showValue: false,
@@ -179,6 +208,8 @@ export default {
     this.queryTodoList();
     this.queryData();
     this.handleListener();
+  },
+  beforeUpdate() {
     this.changeDate();
   },
   activated() {
