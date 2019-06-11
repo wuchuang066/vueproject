@@ -7,6 +7,7 @@
             <img src="../../assets/img/img.jpg" class="user-avator" alt @click="changePic()">
             <div class="user-info-cont">
               <div class="user-info-name">{{name}}</div>
+              <el-button type="primary" icon="plus" @click="changePic()">头像上传</el-button>
               <div>{{role}}</div>
             </div>
           </div>
@@ -148,36 +149,7 @@ export default {
         numbers: ""
       },
       todoList: [],
-      data: [
-        {
-          name: "2018/09/04",
-          value: 1083
-        },
-        {
-          name: "2018/09/05",
-          value: 941
-        },
-        {
-          name: "2018/09/06",
-          value: 1139
-        },
-        {
-          name: "2018/09/07",
-          value: 816
-        },
-        {
-          name: "2018/09/08",
-          value: 327
-        },
-        {
-          name: "2018/09/09",
-          value: 228
-        },
-        {
-          name: "2018/09/10",
-          value: 1065
-        }
-      ],
+      data: [],
       options: {
         title: "最近七天每天的用户访问量",
         showValue: false,
@@ -226,7 +198,8 @@ export default {
         id: request.id,
         status: request.status ? 0 : 1
       });
-      this.$ajax.post(updateUrl, data).catch(response => {
+      let _this = this;
+      _this.$axios.post(updateUrl, data).catch(response => {
         console.log(response);
         this.$router.push("/404");
       });
@@ -254,14 +227,15 @@ export default {
       this.$refs.line.renderChart();
     },
     changePic() {
-      alert("上传图片待开发");
+      alert("修改头像待开发");
     },
     queryData() {
       const url = "http://localhost:8086/message/queryMessage";
       const data = this.$qs.stringify({
         xUserid: localStorage.getItem("ms_userid")
       });
-      this.$ajax
+      let _this = this;
+      _this.$axios
         .post(url, data)
         .then(response => {
           console.log(response);
@@ -281,8 +255,8 @@ export default {
           this.data = response.data.xVisits;
         })
         .catch(response => {
-          alert("系统异常，请联系管理员");
-          this.$router.push("/404");
+          this.$message.error(`系统异常，请联系管理员`);
+          //  this.$router.push("/404");
         });
     },
     queryTodoList() {
@@ -290,7 +264,8 @@ export default {
       const data = this.$qs.stringify({
         xUserid: localStorage.getItem("ms_userid")
       });
-      this.$ajax
+      let _this = this;
+      _this.$axios
         .post(url, data)
         .then(response => {
           const list = response.data;
@@ -306,8 +281,8 @@ export default {
           this.todoList = response.data;
         })
         .catch(response => {
-          alert("系统异常，请联系管理员");
-          this.$router.push("/404");
+          this.$message.error(`系统异常，请联系管理员`);
+          //this.$router.push("/404");
         });
     }
   }

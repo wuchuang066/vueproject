@@ -17,7 +17,7 @@ import qs from 'qs';
 Vue.prototype.$qs = qs;
 Vue.config.productionTip = false
 Vue.use(VueI18n);
-Vue.prototype.$ajax = axios;
+//Vue.prototype.$ajax = axios;
 Vue.use(ElementUI, {
     size: 'small'
 });
