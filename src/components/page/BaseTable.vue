@@ -10,22 +10,30 @@
     <div class="container">
       <div class="handle-box">
         <el-button type="primary" icon="delete" class="handle-del mr10" @click="delAll">批量删除</el-button>
-        <el-select v-model="select_cate" placeholder="筛选省份" class="handle-select mr10">
-          <el-option key="1" label="广东省" value="广东省"></el-option>
-          <el-option key="2" label="湖南省" value="湖南省"></el-option>
-        </el-select>
-        <el-input v-model="select_word" placeholder="筛选关键词" class="handle-input mr10"></el-input>
-        <el-button type="primary" icon="search" @click="search">搜索</el-button>
+        <!-- <el-select v-model="select_cate" placeholder="筛选省份" class="handle-select mr20"> -->
+        <!-- <el-option v-for="item in privinceData" :key="item.areaId" :label="item.areaName" :value="item.areaName"></el-option> -->
+        <el-cascader
+          :options="options"
+          v-model="form.options"
+          placeholder="筛选省份"
+          class="handle-select mr20"
+        ></el-cascader>
+        <!-- <el-option key="1" label="广东省" value="广东省"></el-option>
+        <el-option key="2" label="湖南省" value="湖南省"></el-option>-->
+        <!-- </el-select> -->
+        <el-input v-model="select_word" placeholder="筛选姓名" class="handle-input"></el-input>
+        <el-button type="primary" icon="search" @click="getData">搜索</el-button>
+        <el-button type="primary" icon="search" @click="clear">重置</el-button>
       </div>
       <el-table
-        :data="data"
+        :data="tableData.slice((currentPage-1)*pagesize,currentPage*pagesize)"
         border
         class="table"
         ref="multipleTable"
         @selection-change="handleSelectionChange"
       >
         <el-table-column type="selection" width="55" align="center"></el-table-column>
-        <el-table-column prop="date" label="日期" sortable width="150"></el-table-column>
+        <el-table-column prop="date" label="日期" sortable width="230" :formatter="formatterDate"></el-table-column>
         <el-table-column prop="name" label="姓名" width="120"></el-table-column>
         <el-table-column prop="address" label="地址" :formatter="formatter"></el-table-column>
         <el-table-column label="操作" width="180" align="center">
@@ -49,7 +57,7 @@
           background
           @current-change="handleCurrentChange"
           layout="prev, pager, next"
-          :total="1000"
+          :total="total"
         ></el-pagination>
       </div>
     </div>
@@ -97,46 +105,53 @@ export default {
     return {
       url: "./vuetable.json",
       tableData: [],
+      privinceData: [],
       cur_page: 1,
       multipleSelection: [],
+      total: 0,
+      pagesize: 10,
+      currentPage: 1,
       select_cate: "",
       select_word: "",
       del_list: [],
       is_search: false,
       editVisible: false,
       delVisible: false,
+      options: [],
       form: {
         name: "",
         date: "",
-        address: ""
+        address: "",
+        options: []
       },
       idx: -1
     };
   },
   created() {
     this.getData();
+    this.getProvinceCode();
   },
   computed: {
-    data() {
-      return this.tableData.filter(d => {
-        let is_del = false;
-        for (let i = 0; i < this.del_list.length; i++) {
-          if (d.name === this.del_list[i].name) {
-            is_del = true;
-            break;
-          }
-        }
-        if (!is_del) {
-          if (
-            d.address.indexOf(this.select_cate) > -1 &&
-            (d.name.indexOf(this.select_word) > -1 ||
-              d.address.indexOf(this.select_word) > -1)
-          ) {
-            return d;
-          }
-        }
-      });
-    }
+    // data() {
+    //   return this.tableData.filter(d => {
+    //     let is_del = false;
+    //     for (let i = 0; i < this.del_list.length; i++) {
+    //       if (d.name === this.del_list[i].name) {
+    //         is_del = true;
+    //         break;
+    //       }
+    //     }
+    //     if (!is_del) {
+    //       if (
+    //         d.address.indexOf(this.select_cate) > -1 &&
+    //         (d.name.indexOf(this.select_word) > -1 ||
+    //           d.address.indexOf(this.select_word) > -1)
+    //       ) {
+    //         return d;
+    //       }
+    //     }
+    //   });
+    // }
   },
   methods: {
     // 分页导航
@@ -144,26 +159,47 @@ export default {
       this.cur_page = val;
       this.getData();
     },
-    // 获取 easy-mock 的模拟数据
-    getData() {
-      // 开发环境使用 easy-mock 数据，正式环境使用 json 文件
-      if (process.env.NODE_ENV === "development") {
-        this.url = "/ms/table/list";
-      }
+    getProvinceCode() {
+      const data = {};
+      const url = "http://localhost:8086/common/queryProvince";
+      // const url = "https://www.easy-mock.com/mock/5cffccdd023e223175552420/example/getAddress";
+
       this.$axios
-        .post(this.url, {
-          page: this.cur_page
+        .get(url, data)
+        .then(response => {
+          this.options = response.data;
         })
-        .then(res => {
-          console.log(res);
-          this.tableData = res.data.list;
+        .catch(res => {
+          this.$message.error("系统异常，请联系管理员");
         });
     },
-    search() {
-      this.is_search = true;
+    getData() {
+      const data = this.$qs.stringify({
+        xName: this.select_word,
+        xAddress: this.form.options[2],
+        pageNumber: this.cur_page
+      });
+      const url = "http://localhost:8086/table/queryTableMsg";
+      this.$axios
+        .post(url, data)
+        .then(res => {
+          this.tableData = res.data.list;
+          this.total = res.data.total;
+        })
+        .catch(res => {
+          this.$message.error("系统异常，请联系管理员");
+        });
+    },
+    clear() {
+      this.select_word = "";
+      this.form.options = "";
     },
     formatter(row, column) {
-      return row.address;
+      console.log(row + column);
+      return row.id;
+    },
+    formatterDate(row) {
+      return row.date.substr(0,10)+" "+row.date.substr(11,8);
     },
     filterTag(value, row) {
       return row.tag === value;
@@ -226,7 +262,8 @@ export default {
 }
 
 .handle-input {
-  width: 300px;
+  width: 200px;
+  margin-right: 10px;
   display: inline-block;
 }
 .del-dialog-cnt {
@@ -242,5 +279,9 @@ export default {
 }
 .mr10 {
   margin-right: 10px;
+}
+.mr20 {
+  margin-right: 10px;
+  width: auto;
 }
 </style>
