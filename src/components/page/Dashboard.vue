@@ -239,7 +239,7 @@ export default {
         .post(url, data)
         .then(response => {
           console.log(response);
-          this.system.user_count = response.data.xVisitCount;
+          this.system.user_count = response.data.xVisitCount + 1;
           this.system.showMessage = response.data.xSysMessage;
           this.system.numbers = response.data.xCount;
           this.system.xVue = response.data.xVue;
@@ -253,11 +253,22 @@ export default {
             }
           }
           this.data = response.data.xVisits;
+          this.updateVisitCount();
         })
         .catch(response => {
           this.$message.error(`系统异常，请联系管理员`);
           //  this.$router.push("/404");
         });
+    },
+    updateVisitCount() {
+      const url = "http://localhost:8086/message/updateVisitCount";
+      const data = this.$qs.stringify({
+        xUserid: localStorage.getItem("ms_userid"),
+
+        xVisitCount: this.system.user_count
+      });
+      let _this = this;
+      _this.$axios.post(url, data);
     },
     queryTodoList() {
       const url = "http://localhost:8086/message/queryTodoList";

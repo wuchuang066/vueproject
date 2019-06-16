@@ -19,7 +19,7 @@
           </el-input>
         </el-form-item>
         <div class="login-btn">
-          <el-button type="primary" @click="submitForm('ruleForm')">登录</el-button>
+          <el-button type="primary" @click="submitForm('ruleForm')" @keyup.enter.native="submitForm('ruleForm')">登录</el-button>
         </div>
         <!-- <p class="login-tips">Tips : 用户名和密码随便填。</p> -->
       </el-form>
@@ -43,7 +43,18 @@ export default {
       }
     };
   },
+  created() {
+    this.keyupSubmit();
+  },
   methods: {
+     keyupSubmit() {
+      document.onkeydown = e => {
+        let _key = window.event.keyCode;
+        if (_key === 13) {
+          this.submitForm('ruleForm');
+        }
+      };
+    },
     submitForm(formName) {
       // // 使用vue-resource 进行数据调用
       //  let formData = new FormData();
@@ -65,7 +76,7 @@ export default {
 
       this.$refs[formName].validate(valid => {
         if (valid) {
-          this.$ajax
+          this.$axios
             .post(
               "http://localhost:8086/user/login",
               this.$qs.stringify({

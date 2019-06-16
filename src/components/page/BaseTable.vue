@@ -22,8 +22,9 @@
         <el-option key="2" label="湖南省" value="湖南省"></el-option>-->
         <!-- </el-select> -->
         <el-input v-model="select_word" placeholder="筛选姓名" class="handle-input"></el-input>
-        <el-button type="primary" icon="search" @click="getData">搜索</el-button>
-        <el-button type="primary" icon="search" @click="clear">重置</el-button>
+        <el-button type="primary" icon="search" @click="getData" @keyup.enter.native="getData()">搜索</el-button>
+        <el-button type="primary" icon="clear" @click="clear">重置</el-button>
+        <el-button type="primary" icon="clear" @click="handleAdd()" class="handle-add">添加人员信息</el-button>
       </div>
       <el-table
         :data="tableData.slice((currentPage-1)*pagesize,currentPage*pagesize)"
@@ -61,16 +62,14 @@
         ></el-pagination>
       </div>
     </div>
-
-    <!-- 编辑弹出框 -->
-    <el-dialog title="编辑" :visible.sync="editVisible" width="30%">
+    <!-- 添加弹出框 -->
+    <el-dialog title="添加人员信息" :visible.sync="addVisible" width="30%">
       <el-form ref="form" :model="form" label-width="50px">
         <el-form-item label="日期">
           <el-date-picker
-            type="date"
+            type="datetime"
             placeholder="选择日期"
             v-model="form.date"
-            value-format="yyyy-MM-dd"
             style="width: 100%;"
           ></el-date-picker>
         </el-form-item>
@@ -78,7 +77,42 @@
           <el-input v-model="form.name"></el-input>
         </el-form-item>
         <el-form-item label="地址">
-          <el-input v-model="form.address"></el-input>
+          <!-- <el-input v-model="form.address"></el-input> -->
+          <el-cascader
+            :options="options"
+            v-model="form.address"
+            placeholder="请选择省份"
+            class="handle-select mr20"
+          ></el-cascader>
+        </el-form-item>
+      </el-form>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="addVisible = false">取 消</el-button>
+        <el-button type="primary" @click="saveAdd">确 定</el-button>
+      </span>
+    </el-dialog>
+    <!-- 编辑弹出框 -->
+    <el-dialog title="编辑" :visible.sync="editVisible" width="30%">
+      <el-form ref="form" :model="form" label-width="50px">
+        <el-form-item label="日期">
+          <el-date-picker
+            type="datetime"
+            placeholder="选择日期"
+            v-model="form.date"
+            style="width: 100%;"
+          ></el-date-picker>
+        </el-form-item>
+        <el-form-item label="姓名">
+          <el-input v-model="form.name"></el-input>
+        </el-form-item>
+        <el-form-item label="地址">
+          <!-- <el-input v-model="form.address"></el-input> -->
+          <el-cascader
+            :options="options"
+            v-model="form.address"
+            placeholder="请选择省份"
+            class="handle-select mr20"
+          ></el-cascader>
         </el-form-item>
       </el-form>
       <span slot="footer" class="dialog-footer">
@@ -86,7 +120,6 @@
         <el-button type="primary" @click="saveEdit">确 定</el-button>
       </span>
     </el-dialog>
-
     <!-- 删除提示框 -->
     <el-dialog title="提示" :visible.sync="delVisible" width="300px" center>
       <div class="del-dialog-cnt">删除不可恢复，是否确定删除？</div>
@@ -115,9 +148,11 @@ export default {
       select_word: "",
       del_list: [],
       is_search: false,
+      addVisible: false,
       editVisible: false,
       delVisible: false,
       options: [],
+      sjidfj: [130000, 130300, 130304],
       form: {
         name: "",
         date: "",
@@ -130,6 +165,7 @@ export default {
   created() {
     this.getData();
     this.getProvinceCode();
+    this.keyupSubmit();
   },
   computed: {
     // data() {
@@ -159,6 +195,14 @@ export default {
       this.cur_page = val;
       this.getData();
     },
+    keyupSubmit() {
+      document.onkeydown = e => {
+        let _key = window.event.keyCode;
+        if (_key === 13) {
+          this.getData();
+        }
+      };
+    },
     getProvinceCode() {
       const data = {};
       const url = "http://localhost:8086/common/queryProvince";
@@ -174,6 +218,9 @@ export default {
         });
     },
     getData() {
+      // 有问题
+      console.log("this.form.options");
+      console.log(this.form.options);
       const data = this.$qs.stringify({
         xName: this.select_word,
         xAddress: this.form.options[2],
@@ -195,11 +242,23 @@ export default {
       this.form.options = "";
     },
     formatter(row, column) {
-      console.log(row + column);
-      return row.id;
+      let xAddress = "";
+      const province = row.address.indexOf("省");
+      const city = row.address.indexOf("市");
+      xAddress =
+        row.address.substring(0, province + 1) +
+        "  " +
+        row.address.substring(province + 1, city + 1) +
+        "  " +
+        row.address.substr(city + 1, 100);
+      return xAddress;
     },
     formatterDate(row) {
-      return row.date.substr(0,10)+" "+row.date.substr(11,8);
+      if (typeof row.date == "object") {
+        return this.formatDateTime(row.date);
+      } else {
+        return row.date.substr(0, 10) + " " + row.date.substr(11, 8);
+      }
     },
     filterTag(value, row) {
       return row.tag === value;
@@ -209,10 +268,24 @@ export default {
       const item = this.tableData[index];
       this.form = {
         name: item.name,
-        date: item.date,
-        address: item.address
+        date: new Date(item.date),
+        options: this.form.options,
+        address: [
+          JSON.parse(item.xProvinceCode),
+          JSON.parse(item.xCityCode),
+          JSON.parse(item.xRegionCode)
+        ],
+        id: item.id
       };
       this.editVisible = true;
+    },
+    handleAdd() {
+      this.addVisible = true;
+      this.form = {
+        name: "",
+        date: "",
+        address: []
+      };
     },
     handleDelete(index, row) {
       this.idx = index;
@@ -226,7 +299,6 @@ export default {
         for (let i = 0; i < length; i++) {
           str += this.multipleSelection[i].name + " ";
         }
-        console.log(this.multipleSelection);
         this.$message.error("删除了" + str);
         this.multipleSelection = [];
       } else {
@@ -238,15 +310,97 @@ export default {
     },
     // 保存编辑
     saveEdit() {
-      this.$set(this.tableData, this.idx, this.form);
-      this.editVisible = false;
-      this.$message.success(`修改第 ${this.idx + 1} 行成功`);
+      if (this.form.date == null) {
+        this.$message.warning("请选择日期");
+        return;
+      } else if (this.form.name == "") {
+        this.$message.warning("请输入姓名");
+        return;
+      } else {
+        console.log(this.form.date);
+        const date = this.formatDateTime(this.form.date);
+        const data = this.$qs.stringify({
+          id: this.form.id,
+          xDate: date,
+          xName: this.form.name,
+          xProvinceCode: this.form.address[0],
+          xCityCode: this.form.address[1],
+          xRegionCode: this.form.address[2]
+        });
+        const url = "http://localhost:8086/table/updateTableMsg";
+        this.$axios
+          .post(url, data)
+          .then(res => {
+            this.getData();
+            this.editVisible = false;
+            this.$message.success(`修改第 ${this.idx + 1} 行成功`);
+          })
+          .catch(res => {
+            this.$message.error("系统异常，请联系管理员");
+          });
+      }
+      //  this.$set(this.tableData, this.idx, this.form);
+    },
+
+    // 保存添加
+    saveAdd() {
+      alert(12);
+      console.log(this.form.address);
+      if (this.form.date == null) {
+        this.$message.warning("请选择日期");
+        return;
+      } else if (this.form.name == "") {
+        this.$message.warning("请输入姓名");
+        return;
+      } else if (this.form.address == null || this.form.address.length == 0) {
+        this.$message.warning("请选择所在地区");
+        return;
+      } else {
+        console.log(this.form.date);
+        const date = this.formatDateTime(this.form.date);
+        const data = this.$qs.stringify({
+          id: this.form.id,
+          xDate: date,
+          xName: this.form.name,
+          xProvinceCode: this.form.address[0],
+          xCityCode: this.form.address[1],
+          xRegionCode: this.form.address[2]
+        });
+        const url = "http://localhost:8086/table/addTableMsg";
+        this.$axios
+          .post(url, data)
+          .then(res => {
+            this.addVisible = false;
+            this.$message.success(`添加成功`);
+            this.getData();
+          })
+          .catch(res => {
+            this.$message.error("系统异常，请联系管理员");
+          });
+      }
+      //  this.$set(this.tableData, this.idx, this.form);
     },
     // 确定删除
     deleteRow() {
       this.tableData.splice(this.idx, 1);
       this.$message.success("删除成功");
       this.delVisible = false;
+    },
+    formatDateTime(oldDate) {
+      let date = oldDate;
+      let y = date.getFullYear();
+      let MM = date.getMonth() + 1;
+      MM = MM < 10 ? "0" + MM : MM;
+      let d = date.getDate();
+      d = d < 10 ? "0" + d : d;
+      let h = date.getHours();
+      h = h < 10 ? "0" + h : h;
+      let m = date.getMinutes();
+      m = m < 10 ? "0" + m : m;
+      let s = date.getSeconds();
+      s = s < 10 ? "0" + s : s;
+      date = y + "-" + MM + "-" + d + " " + h + ":" + m + ":" + s;
+      return date;
     }
   }
 };
@@ -265,6 +419,10 @@ export default {
   width: 200px;
   margin-right: 10px;
   display: inline-block;
+}
+.handle-add {
+  float: right;
+  width: 120px;
 }
 .del-dialog-cnt {
   font-size: 16px;
