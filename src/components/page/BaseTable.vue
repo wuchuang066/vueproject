@@ -9,7 +9,12 @@
     </div>
     <div class="container">
       <div class="handle-box">
-        <el-button type="primary" icon="delete" class="handle-del mr10" @click="delAll">批量删除</el-button>
+        <el-button
+          type="primary"
+          icon="delete"
+          class="handle-del mr10"
+          @click="handleDeleteAll"
+        >批量删除</el-button>
         <!-- <el-select v-model="select_cate" placeholder="筛选省份" class="handle-select mr20"> -->
         <!-- <el-option v-for="item in privinceData" :key="item.areaId" :label="item.areaName" :value="item.areaName"></el-option> -->
         <el-cascader
@@ -128,6 +133,15 @@
         <el-button type="primary" @click="deleteRow">确 定</el-button>
       </span>
     </el-dialog>
+
+    <!-- 批量删除提示框 -->
+    <el-dialog title="提示" :visible.sync="delAllVisible" width="300px" center>
+      <div class="del-dialog-cnt">删除不可恢复，是否确定删除？</div>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="delAllVisible = false">取 消</el-button>
+        <el-button type="primary" @click="delAll">确 定</el-button>
+      </span>
+    </el-dialog>
   </div>
 </template>
 
@@ -141,6 +155,7 @@ export default {
       privinceData: [],
       cur_page: 1,
       multipleSelection: [],
+      multipleSelectionTemp: [],
       total: 0,
       pagesize: 10,
       currentPage: 1,
@@ -151,6 +166,7 @@ export default {
       addVisible: false,
       editVisible: false,
       delVisible: false,
+      delAllVisible: false,
       options: [],
       sjidfj: [130000, 130300, 130304],
       form: {
@@ -218,12 +234,13 @@ export default {
         });
     },
     getData() {
-      // 有问题
-      console.log("this.form.options");
-      console.log(this.form.options);
+      let options = [];
+      if (this.form.options != undefined) {
+        options = this.form.options[2];
+      }
       const data = this.$qs.stringify({
         xName: this.select_word,
-        xAddress: this.form.options[2],
+        xAddress: options,
         pageNumber: this.cur_page
       });
       const url = "http://localhost:8086/table/queryTableMsg";
@@ -252,6 +269,23 @@ export default {
         "  " +
         row.address.substr(city + 1, 100);
       return xAddress;
+      //   const provinceCode = row.xProvinceCode;
+      //   const cityCode = row.xCityCode;
+      //   const regionCode = row.xRegionCode;
+      //   const data = this.$qs.stringify({
+      //     xProvinceCode: provinceCode,
+      //     xCityCode: cityCode,
+      //     xRegionCode: regionCode
+      //   });
+      //   const url = "http://localhost:8086/table/queryJoinAddress";
+      //   let test = "1";
+      //   this.$axios
+      //     .post(url, data)
+      //     .then(res => {
+      //       console.log(res.data);
+      //       test=res.data
+      //     })
+      //  return res.data;
     },
     formatterDate(row) {
       if (typeof row.date == "object") {
@@ -288,22 +322,62 @@ export default {
       };
     },
     handleDelete(index, row) {
-      this.idx = index;
+      this.idx = row.id;
       this.delVisible = true;
     },
-    delAll() {
+    // 确定删除
+    deleteRow() {
+      const datas = { array: [] };
+      datas.array[0] = this.idx;
+      console.log(datas);
+      const url = "http://localhost:8086/table/handleDelete";
+      this.$axios
+        .post(url, datas)
+        .then(res => {
+          // this.tableData.splice(this.idx, 1);
+          this.getData();
+          this.$message.success("删除成功");
+          this.delVisible = false;
+        })
+        .catch(res => {
+          this.$message.error("系统异常，请联系管理员");
+        });
+    },
+    handleDeleteAll() {
       const length = this.multipleSelection.length;
       if (length != 0) {
-        let str = "";
-        this.del_list = this.del_list.concat(this.multipleSelection);
-        for (let i = 0; i < length; i++) {
-          str += this.multipleSelection[i].name + " ";
-        }
-        this.$message.error("删除了" + str);
-        this.multipleSelection = [];
+        this.multipleSelectionTemp = this.multipleSelection;
+        this.delAllVisible = true;
       } else {
         this.$message.warning("请选择需要删除的数据");
       }
+    },
+    delAll() {
+      let str = "";
+      this.del_list = this.del_list.concat(this.multipleSelectionTemp);
+      const datas = { array: [] };
+      for (let i = 0; i < this.del_list.length; i++) {
+        datas.array[i] = this.del_list[i].id;
+      }
+      console.log(datas);
+      const url = "http://localhost:8086/table/handleDelete";
+      this.$axios
+        .post(url, datas)
+        .then(res => {
+          const length = this.del_list.length;
+          for (let i = 0; i < length; i++) {
+            str += this.multipleSelectionTemp[i].name + " ";
+          }
+          this.$message.error("删除了" + str);
+          this.getData();
+          this.del_list = [];
+          this.multipleSelection = [];
+          this.multipleSelectionTemp = [];
+          this.delAllVisible = false;
+        })
+        .catch(res => {
+          this.$message.error("系统异常，请联系管理员");
+        });
     },
     handleSelectionChange(val) {
       this.multipleSelection = val;
@@ -317,7 +391,6 @@ export default {
         this.$message.warning("请输入姓名");
         return;
       } else {
-        console.log(this.form.date);
         const date = this.formatDateTime(this.form.date);
         const data = this.$qs.stringify({
           id: this.form.id,
@@ -344,8 +417,6 @@ export default {
 
     // 保存添加
     saveAdd() {
-      alert(12);
-      console.log(this.form.address);
       if (this.form.date == null) {
         this.$message.warning("请选择日期");
         return;
@@ -356,7 +427,6 @@ export default {
         this.$message.warning("请选择所在地区");
         return;
       } else {
-        console.log(this.form.date);
         const date = this.formatDateTime(this.form.date);
         const data = this.$qs.stringify({
           id: this.form.id,
@@ -379,12 +449,6 @@ export default {
           });
       }
       //  this.$set(this.tableData, this.idx, this.form);
-    },
-    // 确定删除
-    deleteRow() {
-      this.tableData.splice(this.idx, 1);
-      this.$message.success("删除成功");
-      this.delVisible = false;
     },
     formatDateTime(oldDate) {
       let date = oldDate;

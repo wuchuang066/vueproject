@@ -60,7 +60,7 @@
                 <i class="el-icon-lx-goods grid-con-icon"></i>
                 <div class="grid-cont-right">
                   <div class="grid-num">{{system.numbers}}</div>
-                  <div>数量</div>
+                  <div>未读消息</div>
                 </div>
               </div>
             </el-card>
